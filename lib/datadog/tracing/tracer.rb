@@ -293,12 +293,18 @@ module Datadog
       #
       #   tracer.shutdown!
       def shutdown!
-        return unless @enabled
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shutdown called\n") }
+        unless @enabled
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shutdown not enabled\n") }
+          return
+        end
 
         if @writer
           File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shutting down writer\n") }
           @writer.stop
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shut down writer\n") }
         end
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shut down complete\n") }
       end
 
       private

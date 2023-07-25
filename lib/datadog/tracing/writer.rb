@@ -51,14 +51,24 @@ module Datadog
       #
       # The {Writer} is also automatically started when necessary during calls to {.write}.
       def start
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start waiting for mutex_after_fork\n") }
         @mutex_after_fork.synchronize do
-          return false if @stopped
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start waiting for mutex_after_fork\n") }
+
+          if @stopped
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start already stopped\n") }
+            return false
+          end
 
           pid = Process.pid
-          return if @worker && pid == @pid
+          if @worker && pid == @pid
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start pid == pid\n") }
+            return
+          end
 
           @pid = pid
 
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start starting worker\n") }
           start_worker
           true
         end
@@ -75,7 +85,9 @@ module Datadog
           interval: @flush_interval
         )
 
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start worker.start\n") }
         @worker.start
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb start worker started\n") }
       end
 
       # Gracefully shuts down this writer.
@@ -85,17 +97,26 @@ module Datadog
       #
       # It is not possible to restart a stopped writer instance.
       def stop
-        @mutex_after_fork.synchronize { stop_worker }
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb stop waiting for mutex_after_fork\n") }
+        @mutex_after_fork.synchronize do
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb stop got mutex_after_fork\n") }
+          stop_worker
+        end
       end
 
       def stop_worker
         @stopped = true
 
-        return if @worker.nil?
+        if @worker.nil?
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb stop worker nil\n") }
+          return
+        end
 
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb stop stopping worker\n") }
         @worker.stop
         @worker = nil
 
+        File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] writer.rb stop stopped worker\n") }
         true
       end
 
