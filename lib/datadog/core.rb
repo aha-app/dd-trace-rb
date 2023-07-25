@@ -39,6 +39,7 @@ module Datadog
     if Interrupt === $! # rubocop:disable Style/SpecialGlobalVars is process terminating due to a ctrl+c or similar?
       Datadog.send(:handle_interrupt_shutdown!)
     else
+      File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] AT_EXIT\n") }
       Datadog.shutdown!
     end
   end

@@ -182,6 +182,8 @@ module Datadog
       # Components won't be automatically reinitialized after a shutdown.
       def shutdown!
         safely_synchronize do
+          # require 'byebug'
+          # byebug
           @components.shutdown! if components?
         end
       end

@@ -295,7 +295,10 @@ module Datadog
       def shutdown!
         return unless @enabled
 
-        @writer.stop if @writer
+        if @writer
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] tracer.rb shutting down writer\n") }
+          @writer.stop
+        end
       end
 
       private

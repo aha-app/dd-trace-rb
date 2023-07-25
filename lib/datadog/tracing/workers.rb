@@ -1,5 +1,6 @@
 require_relative 'buffer'
 require_relative 'pipeline'
+# require 'cli/ui'
 
 module Datadog
   module Tracing
@@ -43,6 +44,7 @@ module Datadog
 
         # Callback function that process traces and executes the +send_traces()+ method.
         def callback_traces
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Flushing traces\n") }
           return true if @trace_buffer.empty?
 
           begin
@@ -75,12 +77,18 @@ module Datadog
 
         # Closes all available queues and waits for the trace buffer to flush
         def stop
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] STOP waiting for mutex\n") }
           @mutex.synchronize do
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] STOP got mutex\n") }
             return unless @run
 
             @trace_buffer.close
             @run = false
+
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Sending shutdown signal\n") }
+            # byebug
             @shutdown.signal
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Shutdown signal sent\n") }
           end
 
           join
@@ -89,7 +97,9 @@ module Datadog
 
         # Block until executor shutdown is complete or until timeout seconds have passed.
         def join
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Waiting for thread to join\n") }
           @worker.join(SHUTDOWN_TIMEOUT)
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Thread joined\n") }
         end
 
         # Enqueue an item in the trace internal buffer. This operation is thread-safe
@@ -97,6 +107,7 @@ module Datadog
         def enqueue_trace(trace)
           return unless trace && !trace.empty?
 
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Enqueuing trace\n") }
           @trace_buffer.push(trace)
         end
 
@@ -105,15 +116,33 @@ module Datadog
         alias flush_data callback_traces
 
         def perform
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread started\n") }
+
           loop do
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread flushing data\n") }
             @back_off = flush_data ? @flush_interval : [@back_off * BACK_OFF_RATIO, BACK_OFF_MAX].min
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread flushed data\n") }
 
+            File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread waiting for mutex\n") }
             @mutex.synchronize do
-              return if !@run && @trace_buffer.empty?
+              # sleep 11111
 
-              @shutdown.wait(@mutex, @back_off) if @run # do not wait when shutting down
+              if !@run && @trace_buffer.empty?
+                File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread returning\n") }
+                return
+              end
+
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread continuing (#{@run}, #{@trace_buffer.empty?})\n") }
+
+              if @run # do not wait when shutting down
+                File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread releasing mutex (#{@back_off})\n") }
+                # sleep 11111
+                @shutdown.wait(@mutex, @back_off)
+              end
             end
           end
+
+          File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}] Worker thread outside loop(?)\n") }
         end
       end
     end
