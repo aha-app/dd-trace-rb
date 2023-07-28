@@ -19,24 +19,36 @@ module Datadog
           # Instance methods for Rake instrumentation
           module InstanceMethods
             def invoke(*args)
-              return super if !enabled? || !instrumented_task?
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] invoke called\n") }
+
+              if !enabled? || !instrumented_task?
+                File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] invoke returning super\n") }
+                return super
+              end
 
               Tracing.trace(Ext::SPAN_INVOKE, **span_options) do |span|
                 annotate_invoke!(span, args)
                 super
               end
             ensure
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] invoke ensure shutdown\n") }
               shutdown_tracer!
             end
 
             def execute(args = nil)
-              return super if !enabled? || !instrumented_task?
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] execute called\n") }
+
+              if !enabled? || !instrumented_task?
+                File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] execute returning super\n") }
+                return super
+              end
 
               Tracing.trace(Ext::SPAN_EXECUTE, **span_options) do |span|
                 annotate_execute!(span, args)
                 super
               end
             ensure
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] execute ensure shutdown\n") }
               shutdown_tracer!
             end
 
@@ -45,11 +57,25 @@ module Datadog
             # Task names are verified dynamically, in order to be agnostic of
             # when tracing is configured in relation to Rake task declaration.
             def instrumented_task?
-              configuration[:tasks].include?(name)
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] instrumented_task? #{name}\n") }
+              res = configuration[:tasks].include?(name)
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] instrumented_task? #{res}\n") }
+              return res
             end
 
             def shutdown_tracer!
-              Tracing.shutdown! if Tracing.active_span.nil? && ::Rake.application.top_level_tasks.include?(name)
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer called\n") }
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer active span: #{Tracing.active_span.nil?}\n") }
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer name: #{name}\n") }
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer top level tasks: #{::Rake.application.top_level_tasks.to_s}\n") }
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer top level tasks include: #{::Rake.application.top_level_tasks.include?(name)}\n") }
+
+              if Tracing.active_span.nil? && ::Rake.application.top_level_tasks.include?(name)
+                File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutting down tracer\n") }
+                Tracing.shutdown!
+              end
+
+              File.open('/tmp/ddtrace.txt', 'a') { |file| file.write("[#{Time.now}][#{Process.pid}][#{Thread.current.object_id}][instrumentation.rb] shutdown_tracer returning\n") }
             end
 
             def annotate_invoke!(span, args)
