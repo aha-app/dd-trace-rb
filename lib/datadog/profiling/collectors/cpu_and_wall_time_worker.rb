@@ -41,7 +41,7 @@ module Datadog
           self.class._native_initialize(
             self,
             thread_context_collector,
-            gc_profiling_enabled,
+            false, #gc_profiling_enabled,
             idle_sampling_helper,
             allocation_counting_enabled,
             no_signals_workaround_enabled,
@@ -54,6 +54,8 @@ module Datadog
         end
 
         def start
+          return true
+
           @start_stop_mutex.synchronize do
             return if @worker_thread && @worker_thread.alive?
 
@@ -86,6 +88,8 @@ module Datadog
         def enabled=(_); end
 
         def stop(*_)
+          return true
+
           @start_stop_mutex.synchronize do
             Datadog.logger.debug('Requesting CpuAndWallTimeWorker thread shut down')
 

@@ -683,6 +683,8 @@ static VALUE _native_gc_tracepoint(DDTRACE_UNUSED VALUE self, VALUE instance) {
 // *NO ALLOCATION* is allowed. This function, and any it calls must never trigger memory or object allocation.
 // This includes exceptions and use of ruby_xcalloc (because xcalloc can trigger GC)!
 static void on_gc_event(VALUE tracepoint_data, DDTRACE_UNUSED void *unused) {
+  return;
+
   if (!ddtrace_rb_ractor_main_p()) {
     return; // We're not on the main Ractor; we currently don't support profiling non-main Ractors
   }
@@ -725,6 +727,8 @@ static void on_gc_event(VALUE tracepoint_data, DDTRACE_UNUSED void *unused) {
 }
 
 static void after_gc_from_postponed_job(DDTRACE_UNUSED void *_unused) {
+  return;
+
   struct cpu_and_wall_time_worker_state *state = active_sampler_instance_state; // Read from global variable, see "sampler global state safety" note above
 
   // This can potentially happen if the CpuAndWallTimeWorker was stopped while the postponed job was waiting to be executed; nothing to do
