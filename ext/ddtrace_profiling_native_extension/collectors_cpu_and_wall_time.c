@@ -165,11 +165,13 @@ static VALUE _native_initialize(DDTRACE_UNUSED VALUE _self, VALUE collector_inst
 // This method exists only to enable testing Datadog::Profiling::Collectors::CpuAndWallTime behavior using RSpec.
 // It SHOULD NOT be used for other purposes.
 static VALUE _native_sample(DDTRACE_UNUSED VALUE _self, VALUE collector_instance) {
-  sample(collector_instance);
+  // sample(collector_instance);
   return Qtrue;
 }
 
 static void sample(VALUE collector_instance) {
+  return;
+
   struct cpu_and_wall_time_collector_state *state;
   TypedData_Get_Struct(collector_instance, struct cpu_and_wall_time_collector_state, &cpu_and_wall_time_collector_typed_data, state);
 
